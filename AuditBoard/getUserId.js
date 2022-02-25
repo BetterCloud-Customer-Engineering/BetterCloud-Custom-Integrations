@@ -1,26 +1,22 @@
 const axios = require('axios');
-let secrets;
-let authKey;
 let errorCallback;
 
-let baseUrl = "https://uplight.auditboardapp.com/api/v1/scim";
+const getAuditBoardUserId = async (baseUrl, apiKey, email) => {
 
-const getUplightUserId = async (email) => {
-
-    let url = baseUrl + '/users?email=${email}'
+    let getUserUrl = `${baseUrl}/Users?filter=email eq "${email}"`
 
     const getUserRequest = {
-        method: "GET",
-        url: url,
+        method: 'GET',
+        url: getUserUrl,
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'x-api-key': authKey
+            "Authorization":apiKey
         }
     };
     try {
         const response = await axios(getUserRequest);
-        const users = response.data,
+        const users = response.data.Resources,
             matchingUser = users.find(user => user.email.toLowerCase() === email);
         if (matchingUser)
             return matchingUser.id;
@@ -32,20 +28,19 @@ const getUplightUserId = async (email) => {
 };
 
 module.exports = async (input, callback, error) => {
-    secrets = input.secrets;
+    let secrets = input.secrets;
     let request = input.request,
         requestBody = request.body,
         email = requestBody.email.toLowerCase().trim();
 
-    authKey = secrets["auth_x-api-key"];
+    let apiKey = secrets["auth_Authorization"],
+        baseUrl = secrets["baseUrl"];
+
     errorCallback = error;
 
     try {
-        const userId = await getUplightUserId(email);
-
+        const userId = await getAuditBoardUserId(baseUrl, apiKey, email);
         request.url = request.url.replace('{userId}', userId);
-        request.url = request.url.replace('{roleId}', roleId);
-        request.url = request.url + "/Users/" + userId
 
         callback(request);
     } catch (err) {
